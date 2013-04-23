@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# RPM pre-uninstall script
+
+%%common%%
+
+chkconfig --del ${username} >/dev/null 2>&1
+
+echo >/dev/null

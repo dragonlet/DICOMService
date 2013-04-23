@@ -1,0 +1,40 @@
+package edu.umro.dicom.service
+
+/*
+ * Copyright 2013 Regents of the University of Michigan
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+import org.restlet.data.Parameter
+
+/**
+ * Associate a parameter with a flag
+ * indicating that it has been recognized
+ * as valid.
+ */
+
+class Param(name:String, value:String) extends Parameter {
+    
+    setName(name.toLowerCase)
+    setValue(value)
+    
+    private var recognized = false;
+    
+    def this(parameter:Parameter) = this(parameter.getName, parameter.getValue)
+        
+    def setRecogonized = recognized = true
+    
+    def isRecognized = recognized
+    
+}

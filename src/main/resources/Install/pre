@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# RPM pre-installation script
+
+%%common%%
+
+java -version >/dev/null 2>&1
+if [ $? != 0 ] ; then
+    echo Unable to run java.  Is it installed and on the PATH? >&2
+    exit 1
+fi
+
+getent group ${groupname} >/dev/null || groupadd -r ${groupname}
+getent passwd ${username} >/dev/null || \
+    useradd -r -g ${groupname} -d ${homedir} -s /sbin/nologin \
+    -c "DICOM Services" ${username}
+
+# Create directories.  If old log files from a previous install
+# are encountered, then change them to have the same owner and group
+for dir in ${dir_list} ; do
+    mkdir ${dir}
+    chmod 755 ${dir}
+    chown -R ${username} ${dir}
+    chgrp -R ${username} ${dir}
+done  >/dev/null 2>&1
+
+exit 0

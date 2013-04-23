@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# RPM post-uninstall script
+
+%%common%%
+
+userdel ${username}
+groupdel ${groupname} >/dev/null 2>&1
+# remove all the explicitly installed files, but leave the log files in /var/log/dicomsvc
+rm -rf ${homedir} /etc/init.d/dicomsvc

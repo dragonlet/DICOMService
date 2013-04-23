@@ -1,0 +1,78 @@
+#!/bin/sh
+##############################################################################
+#                                                                            #
+# Copyright 2013 Regents of the University of Michigan                       #
+#                                                                            #
+# Licensed under the Apache License, Version 2.0 (the "License");            #
+#  you may not use this file except in compliance with the License.          #
+#  You may obtain a copy of the License at                                   #
+#                                                                            #
+#      http://www.apache.org/licenses/LICENSE-2.0                            #
+#                                                                            #
+#  Unless required by applicable law or agreed to in writing, software       #
+#  distributed under the License is distributed on an "AS IS" BASIS,         #
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  #
+#  See the License for the specific language governing permissions and       #
+#  limitations under the License.                                            #
+#                                                                            #
+##############################################################################
+#
+# Startup and shutdown script for DICOM Service
+#
+# start or stop process definition within the boot process
+# chkconfig: 5 81 05
+# description: DICOM service for UMPlanNG from Univ of Mich Radiation Oncology
+# processname: dicomsvc
+# pidfile: /var/run/dicomsvc.pid
+
+%%common%%
+
+export processname=${username}
+export pid_file=/var/run/${processname}.pid
+export lock_file=/var/lock/subsys/${processname}
+export log_file=$(date +/var/log/${processname}/stdouterr_${processname}_%Y-%m-%d_%H-%M-%S.log)
+export install_dir=/usr/local/${processname}
+
+# Source function library.  This creates the operating environment for the process to be started
+. /etc/rc.d/init.d/functions
+
+case "$1" in
+  start)
+        cd ${install_dir}
+        # use all jar files in the installation directory
+        jar=${processname}-${version}-jar-with-dependencies.jar
+        if [ "${CLASSPATH}" == "" ] ; then
+            export CLASSPATH=${jar}
+        else
+            export CLASSPATH=${jar}:${CLASSPATH}
+        fi
+        rm -f ${pid_file}
+        sudo -u ${username} touch ${log_file}  # makes the $log_file owned by user $username
+        sudo -u ${username} java -cp ${CLASSPATH} edu.umro.dicom.service.Root >${log_file} 2>&1 &
+        export pid=$!
+        echo ${pid} > ${pid_file}
+        echo -n ${processname} start
+        kill -0 ${pid} >/dev/null 2>&1
+        [ "$?" -eq 0 ] && touch ${lock_file} >/dev/null 2>&1 && success $"$base startup" || failure $"$base startup"
+        echo
+        ;;
+  stop)
+        echo -n ${processname} stop
+        killproc -p ${pid_file}
+        rm -f ${lock_file} ${pid_file}
+        echo
+        ;;
+  status)
+        echo -n ${processname}
+        status -p ${pid_file}
+        ;;
+  restart)
+        $0 stop
+        $0 start
+        ;;
+  *)
+        echo "Usage: $0 {start|stop|restart|status}"
+        exit 1
+esac
+
+exit 0

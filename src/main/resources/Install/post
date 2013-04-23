@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# RPM post-installation script
+
+%%common%%
+
+chkconfig --add ${username}

@@ -1,0 +1,7 @@
+Manifest-Version: 1.0
+BuildDate: @@BUILD_DATE@@
+Built-By: @@BUILDER@@
+Implementation-Vendor: University of Michigan Radiation Oncology
+JarDescription: DICOM ReST interface and GUI
+Implementation-Title: DICOM ReST interface and GUI
+Implementation-Version: @@VERSION@@

@@ -1,0 +1,233 @@
+package dicom_service;
+
+option cc_generic_services = false;
+option java_package = "edu.umro.dicom.service";
+
+// Completely specify a pacs
+message pacs {
+  required string aetitle             = 1;
+  optional int32 port                 = 2;
+  optional string host                = 3;
+  repeated dictionaryItem indexedList = 4;
+}
+
+message pacsList {
+  repeated pacs list = 1;
+}
+
+message nothing {
+}
+
+message identity {
+  required string id = 1;
+}
+
+message identityList {
+  repeated string id = 1;
+}
+
+message dictionaryItem {
+  required string id      = 1;
+  required int32  element = 2;
+  required int32  group   = 3;
+  required string vr      = 4;
+}
+
+message dictionary {
+  required string         id   = 1;
+  repeated dictionaryItem item = 2;
+}
+
+
+
+// raw DICOM data
+message dicom {
+  required string guid = 1;
+  required bytes  data = 2;
+}
+
+message dicomList {
+  repeated dicom data = 1;
+}
+
+message tagValue {
+  required string tag   = 1;
+  required string value = 2;
+}
+
+message where {
+  enum queryLevel {
+    PATIENT = 1;
+    STUDY   = 2;
+    SERIES  = 3;
+    IMAGE   = 4;
+  }
+  optional string PACS            = 2;
+  repeated tagValue dicomKeyValue = 3;
+  optional string dictionary      = 4;
+  optional string progress        = 5;
+  optional int64 limit            = 6;
+  optional int64 sizeLimit        = 7;
+}
+
+
+message xmlList {
+  repeated string xml = 1;
+}
+
+
+message cmoveMessage {
+  required where  whereValues = 1; // specification of DICOM files
+  optional string progress    = 2; // send progress events to this AMQP routing tag
+  required string source      = 3; // source pacs
+  required string dest        = 4; // target pacs
+}
+
+message cmoveResponse {
+  required int64 count = 1;  // number of DICOM files copied
+}
+
+message rawDicom {
+  // the target pacs on which to put the data
+  required string pacs = 1;
+  // raw DICOM file 
+  required bytes data = 2;
+}
+
+message dicomBinaryComponent {
+  required string tag = 1;
+  required bytes data = 2;
+}
+
+message dicomComponents {
+   optional string aeTitle = 1;            // AE title
+   required string metaData = 2;           // XML representation of metadata
+   repeated dicomBinaryComponent data = 3; // values for binary elements (usually image data)
+}
+
+message whereImage {
+    required where qualifiers = 1;
+    optional format formatting = 2;
+}
+
+
+service DicomService {
+  // perform a DICOM C-MOVE operation
+  rpc cmove             (cmoveMessage)    returns (cmoveResponse);
+  rpc putDicom          (rawDicom)        returns (nothing);
+  rpc getDicom          (where)           returns (dicomList);
+  rpc constructDicom    (dicomComponents) returns (nothing);
+  rpc getMetaData       (where)           returns (xmlList);
+  rpc getImage          (whereImage)      returns (dicom);
+  rpc getImageList      (whereImage)      returns (dicomList);
+  rpc find              (where)           returns (dicom);
+
+  rpc getDictionary     (identity)        returns (dictionary);
+  rpc getDictionaryList (nothing)         returns (identityList);
+  rpc addDictionary     (dictionary)      returns (nothing);
+  rpc deleteDictionary  (identity)        returns (nothing);
+
+  rpc getAllPacs        (nothing)         returns (pacsList);
+  rpc addPacs           (pacs)            returns (nothing);
+  rpc deletePacs        (identity)        returns (nothing);
+}
+
+
+message format {
+  // indicate the mime type of DICOM data
+  enum mimeType {
+    application_octet_stream   = 1 ; // DICOM native format
+    image_jpeg                 = 2 ; // DICOM image converted to standard JPEG
+  }
+  // list of formatting tag-value pairs that indicate how the data is to be formatted
+  //
+
+  //    The following tags may be used with values that indicate how to format the DICOM data.
+  //
+  //    WADO formatting directives.  See the DICOM standard for details.  Most of these values are optional.
+  //        charsets               : specify return charset, defaults to UTF-8
+  //        anonymize              : if true, anonymize data
+  //        annotations            : annotations to be superimposed as text on image
+  //        rows                   : number of pixel rows
+  //        columns                : number of pixel columns
+  //        region                 : 2 coordinates specifying cropping rectangle
+  //        windowCenter           : center of contrast range
+  //        windowWidth            : width of contrast range
+  //        frameNumber            : if image contains multiple frames, return this one
+  //        imageQuality           : a value from 1 to 100 indicating compression lossyness.  100 is best quality.
+  //        presentationUID        : indicates how image is to be formatted
+  //        presentationSeriesUID  : Silently ignored.  It is supported for WADO compatibility.
+  //        transferSyntax         : Formatting. May be ignored if mimeType is given and not compatible. See pixelmed/dicom/TransferSyntax.java for complete list
+  //
+  //    When requesting metadata, this value may be specified with true or
+  //    false as the value.  Setting it to true indicates that only metadata
+  //    that is indexed by the PACS should be returned.  This provides the
+  //    caller with a way to get a brief summary of the data.  It is also
+  //    much faster than getting all of the metadata, as it can be retrieved
+  //    with a DICOM FIND rather than reading and parsing entire DICOM files.
+  //        
+  //    indexedOnly        : when returning metadata, only return those values that are indexed by the PACS
+  
+  repeated tagValue formatList = 2;
+}
+
+option java_outer_classname = "DicomServiceProto";
+
+/* --------------------------------------------------------------------------------------------------------
+
+request modifiers
+
+    queryLevel    // required, must be one of patient, study, series, or image.
+    pacs          // comma separated list of PACS to search, or * for all.  If not specified, then default list of pacs is used.
+    limit         // limit the number of results returned (similar to the functionality in SQL)
+    dictionary    // Pixelmed compatible dictionary to use.  If not specified, the default dictionary is used.
+    
+    where qualifiers
+    
+    DICOM tags    // any DICOM tags as defined by the pixelmed dictionary being
+                  // used, though the only valid values are those that are indexed by the pacs
+
+    WADO where qualifiers
+        studyUID
+        seriesUID
+        objectUID
+        
+    WADO formatting directives
+        charsets
+        anonymize
+        annotations
+        rows
+        columns
+        region
+        windowCenter
+        windowWidth
+        frameNumber
+        imageQuality
+        presentationUID
+        presentationSeriesUID
+        transferSyntax         // pixelmed/dicom/TransferSyntax.java
+
+    formatting directives        
+        indexedOnly        // if true, when returning metadata, only return those values that
+                           // are indexed by the PACS
+        metaDataList       // Explicit list of comma separated DICOM dictionary indicating the subset of attributes to be
+                           // returned.  If this is not specified, then all attributes are returned.
+        
+
+
+Possible mime return types:
+
+    application/dicom         // raw DICOM
+    application/octet-stream  // binary parts of DICOM files (usually images) in native format
+    image/jpeg
+    application/xml           //  pixelmed format of XML data
+    
+    // maybe in the future
+    text/plain                //  text formatted metadata
+    text/html                 //  html formatted metadata
+    image/png
+    image/gif                 // and possibly animated gifs
+    image/jp2
+    video/mpeg
+    
+*/

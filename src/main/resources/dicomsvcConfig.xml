@@ -1,0 +1,328 @@
+<?xml version='1.0' encoding='utf-8'?>
+
+<!-- 
+  Copyright 2013 Regents of the University of Michigan
+ 
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+ 
+      http://www.apache.org/licenses/LICENSE-2.0
+ 
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<!-- Generic Configuration file for DICOM Service dicomsvc -->
+
+<DicomServiceConfig>
+
+    <!-- Port number for the ReST service (not a DICOM port). -->
+    <Port>8091</Port>
+    
+    <!-- AE Title prefix to be used by the service.  For each  it will be
+    suffixed with the port number, so for example if AETitle is
+    MYPACS and port 1234 was used, it would become MYPACS1234 , and this is
+    the AE title that must be entered into other PACS that you want to
+    communicate with this service.  For each AE title an optional Host is given that
+    indicates where it is configured by other systems to be.  A Low and High
+    port range dictate the inclusive port range where PACS services will
+    be instantiated.  The Low and High also indicate how many instances of PACS
+    services will be instantiated. -->
+    <AETitleList>
+        <AETitle Low='5681' High='5684'>DICOMSVC-</AETitle>
+    </AETitleList>
+    
+        
+    <MRCT>
+        <AETitle>SYNTHETIC-CT</AETitle>
+        <Port>5680</Port>
+        <AgentName>edu.umro.dicom.service.SyntheticCT</AgentName>
+        <User>UMRO_MRI</User>
+        <XRoutingKey>XAria.Event.EventDicomObject</XRoutingKey>
+        <DataRoutingKey>MRCT.Data.DicomObject</DataRoutingKey>
+        <DataExchange>datatopic</DataExchange>
+    </MRCT>
+    
+    <!-- Location of directory java keystore file and passwords.  If this value is specified by the
+    system property javax.net.ssl.trustStore then the system property will
+    override these entries.  Multiple entries indicate that
+    multiple locations should be tried in the given order. -->
+    <javax.net.ssl.trustStore.dir keypass='areallyfantasticpassword' storepass='areallyfantasticpassword'>.</javax.net.ssl.trustStore.dir>
+    <javax.net.ssl.trustStore.dir keypass='areallyfantasticpassword' storepass='areallyfantasticpassword'>src/main/resources</javax.net.ssl.trustStore.dir>
+
+    <!-- Put audit files in this directory, depending on the operating system. -->
+    <AuditDirectory OS='LINUX'>/var/log/dicomsvc/audit</AuditDirectory>
+    <AuditDirectory OS='WINDOWS'>C:\Program Files\UMRO\dicomsvc\log\audit</AuditDirectory>
+
+    <!-- Put temporary files in this directory, depending on the operating system. -->
+    <TemporaryDirectory OS='LINUX'>/var/tmp/dicomsvc</TemporaryDirectory>
+    <TemporaryDirectory OS='WINDOWS'>C:\Program Files\UMRO\dicomsvc\tmp</TemporaryDirectory>
+
+    <PACSList>
+        <PACS AETitle='AETitle1'   Host='DICOM_HOST1'   Port='5678'  />
+        <PACS AETitle='AETitle2'   Host='DICOM_HOST2'   Port='5678'  />
+        <PACS AETitle='IRRER'      Host='141.214.125.70'  Port='15678' />
+    </PACSList>
+    
+
+    <!-- Time in minutes to cache login passwords and authorization credentials.  If 0 or
+    less, or not set up, no caching will be done.  Caching means that this server will keep
+    credentials in memory so that it does not have to consult the authorization or authentication
+    services as frequently, which can result in a big performance improvement.   If this
+    value is not set up, then no caching will be done. -->
+    <CredentialCacheTime>10</CredentialCacheTime> 
+   
+    
+    <!-- Indicates what credentials a user must have to access various services.
+    The Pattern indicates what service the authorization is for, and the Group
+    indicates which groups the user must be a member of in order to use the service.
+    
+    The GroupList element requires a list of groups.  If a user belongs to
+    one or more of those groups, then they are authorized to use the service.
+    If there are no Group items under GroupList, then no user can use the service.
+    
+    If an authorization can not be found for a service, then no user will be allowed
+    to use that service.
+    
+    The GroupAny element may be used instead of GroupList, and if so, indicates that
+    any user may use that service, even if they are not in any group.
+    
+    Known groups:
+    
+        LDAP
+        VARIS
+        VMS
+        LINUX
+        AUDITPACS
+        UPLOADPACS
+    
+    -->
+    <AuthorizationList>
+        <Authorization>
+            <Pattern>/dicom/get</Pattern>
+            <Pattern>/dicom/put</Pattern>
+            <Pattern>/dicom/cfind</Pattern>
+            <GroupList>
+                <Group>aaaa</Group>
+                <Group>bbbb</Group>
+            </GroupList>
+        </Authorization>
+        <Authorization>
+            <Pattern>/pacs</Pattern>
+            <Pattern>/expired</Pattern>
+            <GroupList>
+                <Group>aaaa</Group>
+            </GroupList>
+        </Authorization>
+    </AuthorizationList>
+
+    <!-- List of sources that do not require authentication or authorization. -->
+	<WhiteList>
+        <Host>127.0.0.1</Host>
+        <Host>localhost</Host>
+	</WhiteList>
+
+    
+    <!-- Location of LDAP service that has user names and passwords.  If not configured, then the LDAP feature is not active. -->
+    <!-- <UserAuthenticationLdapUrl>ldap://myldapservice:636/</UserAuthenticationLdapUrl> -->
+        
+    <!-- Format of security principal used in LDAP query to determine if user is authenticated.
+    The @@user_id@@ string is replaced with the actual user id. -->
+    <UserAuthenticationLdapFormat>cn=@@user_id@@,ou=people,dc=med,dc=umich,dc=edu</UserAuthenticationLdapFormat>
+    
+    <!-- Prompt presented to user when entering their name and password.  If not
+    specified, a default prompt will be used.  It is useful to configure this in
+    situations where a user has logins to several systems, and might not be clear
+    on which login credentials to use.-->
+    <UserAuthenticationLdapPrompt>Enter your name and password</UserAuthenticationLdapPrompt>
+
+    <!-- PACS to be used for performing DICOM List operations.  This feature is only useful at UMRO. -->
+    <!-- <DicomListAETitle>MY_PACS</DicomListAETitle> -->
+
+    <!-- If the caller does not specify a limit of how many results to
+    return when doing a cfind, then use this as the default. -->
+    <CFindLimit>2000</CFindLimit>
+    
+	<CFindTagList Level='PATIENT'>
+        <Tag>QueryRetrieveLevel</Tag>
+		<Tag>PatientName</Tag>
+		<Tag>PatientID</Tag>
+		<Tag>IssuerOfPatientID</Tag>
+		<Tag>ReferencedPatientSequence</Tag>
+		<Tag>ReferencedSOPClassUID</Tag>
+		<Tag>ReferencedSOPInstanceUID</Tag>
+		<Tag>PatientBirthDate</Tag>
+		<Tag>PatientBirthTime</Tag>
+		<Tag>PatientSex</Tag>
+		<Tag>OtherPatientIDs</Tag>
+		<Tag>OtherPatientID</Tag>
+		<Tag>OtherPatientNames</Tag>
+		<Tag>OtherPatientName</Tag>
+		<Tag>EthnicGroup</Tag>
+		<Tag>PatientComments</Tag>
+		<Tag>NumberOfPatientRelatedStudies</Tag>
+		<Tag>NumberOfPatientRelatedSeries</Tag>
+		<Tag>NumberOfPatientRelatedInstances</Tag>
+	</CFindTagList>
+	<CFindTagList Level='STUDY'>
+        <Tag>QueryRetrieveLevel</Tag>
+        <Tag>PatientName</Tag>
+        <Tag>PatientID</Tag>
+        <Tag>IssuerOfPatientID</Tag>
+        <Tag>ReferencedPatientSequence</Tag>
+        <Tag>ReferencedSOPClassUID</Tag>
+        <Tag>ReferencedSOPInstanceUID</Tag>
+        <Tag>PatientBirthDate</Tag>
+        <Tag>PatientBirthTime</Tag>
+        <Tag>PatientSex</Tag>
+        <Tag>OtherPatientIDs</Tag>
+        <Tag>OtherPatientID</Tag>
+        <Tag>OtherPatientNames</Tag>
+        <Tag>OtherPatientName</Tag>
+        <Tag>EthnicGroup</Tag>
+        <Tag>PatientComments</Tag>
+        <Tag>NumberOfPatientRelatedStudies</Tag>
+        <Tag>NumberOfPatientRelatedSeries</Tag>
+        <Tag>NumberOfPatientRelatedInstances</Tag>
+	
+	
+	
+		<Tag>StudyDate</Tag>
+		<Tag>StudyTime</Tag>
+		<Tag>AccessionNumber</Tag>
+		<Tag>StudyID</Tag>
+		<Tag>StudyInstanceUID</Tag>
+		<Tag>ModalitiesInStudy</Tag>
+		<Tag>SOPClassesInStudy</Tag>
+		<Tag>ReferringPhysicianName</Tag>
+		<Tag>StudyDescription</Tag>
+		<Tag>ProcedureCodeSequence</Tag>
+		<Tag>CodeValue</Tag>
+		<Tag>CodingSchemeDesignator</Tag>
+		<Tag>CodingSchemeVersion</Tag>
+		<Tag>CodeMeaning</Tag>
+		<Tag>AdmittingDiagnosesDescription</Tag>
+		<Tag>ReferencedStudySequence</Tag>
+		<Tag>ReferencedSOPClassUID</Tag>
+		<Tag>ReferencedSOPInstanceUID</Tag>
+		<Tag>PatientAge</Tag>
+		<Tag>PatientSize</Tag>
+		<Tag>PatientWeight</Tag>
+		<Tag>Occupation</Tag>
+		<Tag>AdditionalPatientHistory</Tag>
+		<Tag>OtherStudyNumbers</Tag>
+		<Tag>NumberOfStudyRelatedSeries</Tag>
+		<Tag>NumberOfStudyRelatedInstances</Tag>
+	</CFindTagList>
+	<CFindTagList Level='SERIES'>
+        <Tag>QueryRetrieveLevel</Tag>
+		<Tag>Modality</Tag>
+		<Tag>SeriesNumber</Tag>
+		<Tag>SeriesInstanceUID</Tag>
+		<Tag>NumberOfSeriesRelatedInstances</Tag>
+		
+		
+		<Tag>PatientName</Tag>
+        <Tag>PatientID</Tag>
+        <Tag>IssuerOfPatientID</Tag>
+        <Tag>ReferencedPatientSequence</Tag>
+        <Tag>ReferencedSOPClassUID</Tag>
+        <Tag>ReferencedSOPInstanceUID</Tag>
+        <Tag>PatientBirthDate</Tag>
+        <Tag>PatientBirthTime</Tag>
+        <Tag>PatientSex</Tag>
+        <Tag>OtherPatientIDs</Tag>
+        <Tag>OtherPatientID</Tag>
+        <Tag>OtherPatientNames</Tag>
+        <Tag>OtherPatientName</Tag>
+        <Tag>EthnicGroup</Tag>
+        <Tag>PatientComments</Tag>
+        <Tag>NumberOfPatientRelatedStudies</Tag>
+        <Tag>NumberOfPatientRelatedSeries</Tag>
+        <Tag>NumberOfPatientRelatedInstances</Tag>
+    
+    
+    
+        <Tag>StudyDate</Tag>
+        <Tag>StudyTime</Tag>
+        <Tag>AccessionNumber</Tag>
+        <Tag>StudyID</Tag>
+        <Tag>StudyInstanceUID</Tag>
+        <Tag>ModalitiesInStudy</Tag>
+        <Tag>SOPClassesInStudy</Tag>
+        <Tag>ReferringPhysicianName</Tag>
+        <Tag>StudyDescription</Tag>
+        <Tag>ProcedureCodeSequence</Tag>
+        <Tag>CodeValue</Tag>
+        <Tag>CodingSchemeDesignator</Tag>
+        <Tag>CodingSchemeVersion</Tag>
+        <Tag>CodeMeaning</Tag>
+        <Tag>AdmittingDiagnosesDescription</Tag>
+        <Tag>ReferencedStudySequence</Tag>
+        <Tag>ReferencedSOPClassUID</Tag>
+        <Tag>ReferencedSOPInstanceUID</Tag>
+        <Tag>PatientAge</Tag>
+        <Tag>PatientSize</Tag>
+        <Tag>PatientWeight</Tag>
+        <Tag>Occupation</Tag>
+        <Tag>AdditionalPatientHistory</Tag>
+        <Tag>OtherStudyNumbers</Tag>
+        <Tag>NumberOfStudyRelatedSeries</Tag>
+        <Tag>NumberOfStudyRelatedInstances</Tag>
+		
+		
+	</CFindTagList>
+	<CFindTagList Level='IMAGE'>
+        <Tag>QueryRetrieveLevel</Tag>
+		<Tag>InstanceNumber</Tag>
+		<Tag>SOPInstanceUID</Tag>
+		<Tag>SOPClassUID</Tag>
+		<Tag>AlternateRepresentationSequence</Tag>
+		<Tag>SeriesInstanceUID</Tag>
+		<Tag>ReferencedSOPClassUID</Tag>
+		<Tag>ReferencedSOPInstanceUID</Tag>
+		<Tag>PurposeOfReferenceCodeSequence</Tag>
+		<Tag>CodeValue</Tag>
+		<Tag>CodingSchemeDesignator</Tag>
+		<Tag>CodingSchemeVersion</Tag>
+		<Tag>CodeMeaning</Tag>
+		<Tag>RelatedGeneralSOPClassUID</Tag>
+		<Tag>ConceptNameCodeSequence</Tag>
+		<Tag>CodeValue</Tag>
+		<Tag>CodingSchemeDesignator</Tag>
+		<Tag>CodingSchemeVersion</Tag>
+		<Tag>CodeMeaning</Tag>
+		<Tag>ContentTemplateSequence</Tag>
+		<Tag>TemplateIdentifier</Tag>
+		<Tag>MappingResource</Tag>
+		<Tag>ContainerIdentifier</Tag>
+		<Tag>SpecimenDescriptionSequence</Tag>
+		<Tag>SpecimenIdentifier</Tag>
+		<Tag>SpecimenUID</Tag>
+	</CFindTagList>
+	
+	<!-- List of tags whose contents should be anonymized. -->
+	<AnonymizeList>
+        <Tag>PatientID</Tag>
+        <Tag>PatientName</Tag>
+        <Tag>ReferringPhysicianName</Tag>
+        <Tag>ReferringPhysicianAddress</Tag>
+        <Tag>ReferringPhysicianTelephoneNumbers</Tag>
+        <Tag>ReferringPhysicianTelephoneNumber</Tag>
+        <Tag>PatientName</Tag>
+        <Tag>PatientName</Tag>
+        <Tag>PatientName</Tag>
+        <Tag>PatientName</Tag>
+        <Tag>PatientName</Tag>
+        <Tag>PatientName</Tag>
+        
+	</AnonymizeList>
+	    
+    <!-- Files on the STAGING PACS that are this old or older are considered expired and should be deleted. -->
+    <ExpirationAge>14</ExpirationAge>
+	
+</DicomServiceConfig>

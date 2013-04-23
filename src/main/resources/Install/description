@@ -1,0 +1,10 @@
+The DICOM standard (http://medical.nema.org/) defines its
+own network protocol, storage format, and security system,
+which drives users of that data to use specialized tools to
+access it.  This service instead provides an interface using
+domain independent standards such as HTTP, XML, JPEG, and
+SSL to simplify DICOM access.  Specifically, the service
+provides a ReST interface that allows clients to find, read,
+construct, and convert DICOM files, and provides access to
+PACSs (Picture Archiving and Communication System).  Browser
+access to this data is also supported.
