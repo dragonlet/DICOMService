@@ -76,6 +76,9 @@ public class RestDicomPut extends Restlet {
             transferSyntaxList.add(xs);
         }
     }
+    
+    /** Buffer for reading stream from client. */
+    private byte[] buffer = new byte[8*1024*1024];
 
     /**
      * Set the return status, message, and the return content.
@@ -120,10 +123,33 @@ public class RestDicomPut extends Restlet {
 
         return text.toString();
     }
+    
+    private int readStream(InputStream httpInputStream) throws IOException {
+        int length;
+        int totalLength = 0;
+        Log.get().info("Starting read of input stream ...");
+        while ((length = httpInputStream.read(buffer, totalLength, buffer.length - totalLength)) != -1) {
+            totalLength += length;
+            if ((totalLength == buffer.length) && (length != -1)) {
+                Log.get().info("Allocating larger buffer of size " + (buffer.length*2));
+                byte[] biggerBuffer = new byte[buffer.length * 2];
+                System.arraycopy(buffer, 0, biggerBuffer, 0, buffer.length);
+                buffer = biggerBuffer;
+            }
+        }
+        Log.get().info("Finished read of input stream.  Length: " + totalLength);
+        return totalLength;
+    }
 
 
+    /**
+     * Note that this method is <code>synchronized</code> because it reuses the
+     * <code>buffer</code> field.  If the synchronization becomes a bottleneck,
+     * then it could be corrected by making a thread safe pool of buffers.
+     */
     @Override
-    public void handle(Request request, Response response) {
+    public synchronized void handle(Request request, Response response) {
+        Log.get().info("RestDicomPut.handle Request: " + request);
         // assume failure until an operation succeeds.
         setError(response, Status.SERVER_ERROR_INTERNAL, this.getClass() + " Internal server error.");
         try {
@@ -147,13 +173,14 @@ public class RestDicomPut extends Restlet {
             
             pacsAETitle = pacsAETitle.trim();
             
-            Log.get().fine("PACS AE Title: " + pacsAETitle);
+            Log.get().info("Put to PACS AE Title: " + pacsAETitle);
 
             PACS pacs = PACS.findPacs(pacsAETitle);
             if (pacs == null) {
                 setError(response, Status.CLIENT_ERROR_BAD_REQUEST, "Unknown PACS AE title given: " + pacsAETitle);
                 return;
             }
+            Log.get().info("Found PACS: " + pacs);
 
             // Most likely all PACS will operate in uncompressed mode, but it should be checked for just in case,
             // and if there is a non-compressed PACS out there it should be reported in a way that makes sense
@@ -167,31 +194,29 @@ public class RestDicomPut extends Restlet {
             }
             //int compressionLevel = 0;
 
+            Log.get().info("Getting httpInputStream");
             InputStream httpInputStream = request.getEntity().getStream();
             if (httpInputStream == null) {
                 setError(response, Status.CLIENT_ERROR_BAD_REQUEST, "No data given to upload for HTTP PUT.");
                 return;
             }
+            Log.get().info("Got httpInputStream");
 
             // convert byte stream into DICOM file
             AttributeList attributeList = new AttributeList();
+            Log.get().info("Constructed empty AttributeList");
             try {
-                byte[] bigBuf = new byte[64*1024*1024];
-                int length;
-                int totalLength = 0;
-                while ((length = httpInputStream.read(bigBuf, totalLength, bigBuf.length - totalLength)) != -1) {
-                    totalLength += length;
-                }
+                int length = readStream(httpInputStream);
 
                 boolean converted = false;
                 for (String xferSyntax : transferSyntaxList) {
                     try {
-                        InputStream byteInputStream = new ByteArrayInputStream(bigBuf, 0, totalLength);
+                        InputStream byteInputStream = new ByteArrayInputStream(buffer, 0, length);
                         DicomInputStream dicomInputStream = new DicomInputStream(byteInputStream, xferSyntax, true);
                         attributeList.read(dicomInputStream);
                         converted = attributeList.get(TagFromName.SOPInstanceUID) != null;
                         if (converted) {
-                            Log.get().info("Read DICOM image from client of size " + totalLength + " bytes.");
+                            Log.get().info("Read DICOM image from client of size " + length + " bytes.");
                             if (!xferSyntax.equals(transferSyntaxList.getFirst())) {
                                 transferSyntaxList.remove(xferSyntax);
                                 transferSyntaxList.push(xferSyntax);
