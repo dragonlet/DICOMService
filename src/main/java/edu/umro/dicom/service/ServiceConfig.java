@@ -402,6 +402,17 @@ public class ServiceConfig {
 
 
     /**
+     * Get the AE title that that server should call itself.
+     * 
+     * @return AE Title
+     * 
+     */
+    public String getTcpNoDelay() {
+        return getValue("/DicomServiceConfig/TcpNoDelay");
+    }
+
+
+    /**
      * Get the XStor FS directory that contains the DICOM objects.
      * 
      * @return XStor FS directory that contains the DICOM objects

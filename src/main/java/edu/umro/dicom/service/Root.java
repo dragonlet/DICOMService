@@ -17,6 +17,7 @@ package edu.umro.dicom.service;
  */
 
 import java.io.File;
+import java.net.ServerSocket;
 import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import javax.xml.ws.Holder;
 
 import org.restlet.Application;
 import org.restlet.Component;
+import org.restlet.Context;
 import org.restlet.Server;
 import org.restlet.data.ChallengeScheme;
 import org.restlet.data.Parameter;
@@ -309,11 +311,31 @@ public class Root extends Application {
     }
 
 
+    private void setTcpNoDelay(Context context) {
+        String tcpNoDelay = ServiceConfig.getInstance().getTcpNoDelay();
+        if (tcpNoDelay == null) {
+            Log.get().info("tcpNoDelay has not been changed.");
+        }
+        else {
+            if (tcpNoDelay.equalsIgnoreCase("true")) {
+                context.getParameters().add("tcpNoDelay", "true");
+                Log.get().info("Set tcpNoDelay to true");
+            }
+            if (tcpNoDelay.equalsIgnoreCase("false")) {
+                context.getParameters().add("tcpNoDelay", "false");
+                Log.get().info("Set tcpNoDelay to false");
+            }
+        }
+    }
+
+
     @Override
     public Restlet createInboundRoot() {
 
         // Create a root router
-        Router router = new Router(getContext());
+        Context context = getContext();
+        setTcpNoDelay(context);
+        Router router = new Router(context);
         router.setDefaultMatchingMode(Template.MODE_STARTS_WITH);
 
         // Attach the handlers to the root router
