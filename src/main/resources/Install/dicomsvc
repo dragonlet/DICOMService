@@ -45,17 +45,19 @@ case "$1" in
             export CLASSPATH=${jar}
         else
             export CLASSPATH=${jar}:${CLASSPATH}
-        fi
+        fi  
         rm -f ${pid_file}
-        sudo -u ${username} touch ${log_file}  # makes the $log_file owned by user $username
-        sudo -u ${username} java -cp ${CLASSPATH} edu.umro.dicom.service.Root >${log_file} 2>&1 &
-        export pid=$!
-        echo ${pid} > ${pid_file}
+        touch ${log_file} >/dev/null 2>&1 # makes the $log_file owned by user $username
+        chown ${username} ${log_file} >/dev/null 2>&1 # makes the $log_file owned by user $username
+        chgrp ${username} ${log_file} >/dev/null 2>&1 # makes the $log_file owned by user $username
+        su ${username} -c "java -cp ${CLASSPATH} edu.umro.dicom.service.Root >${log_file} 2>&1" &
+        export pid=$( top -b -n 1 | grep dicomsvc.*java | sed 's/ .*//' )
+        echo $pid > ${pid_file}
         echo -n ${processname} start
         kill -0 ${pid} >/dev/null 2>&1
         [ "$?" -eq 0 ] && touch ${lock_file} >/dev/null 2>&1 && success $"$base startup" || failure $"$base startup"
         echo
-        ;;
+        ;;  
   stop)
         echo -n ${processname} stop
         killproc -p ${pid_file}
